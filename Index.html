@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>日文口說練習｜裝置測試</title>
+<style>
+  :root { --ok:#1f8a4c; --bad:#c0392b; --warn:#b7791f; --line:#e3e3e3; --main:#2b5797; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+         margin: 0; background: #f6f7f9; color: #222; font-size: 17px; line-height: 1.6; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 22px; margin: 8px 0 4px; }
+  .sub { color: #666; font-size: 15px; margin-bottom: 14px; }
+  .card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 18px; margin: 0 0 6px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .badge { font-size: 14px; padding: 2px 10px; border-radius: 99px; background: #eee; color: #555; white-space: nowrap; }
+  .badge.ok { background: #e3f4ea; color: var(--ok); }
+  .badge.bad { background: #fbe9e7; color: var(--bad); }
+  .badge.warn { background: #fdf3e1; color: var(--warn); }
+  .hint { color: #555; font-size: 15px; margin: 4px 0 10px; }
+  button { font-size: 17px; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--main);
+           background: var(--main); color: #fff; cursor: pointer; margin: 4px 6px 4px 0; }
+  button.ghost { background: #fff; color: var(--main); }
+  button:disabled { opacity: .45; cursor: default; }
+  button.rec { background: var(--bad); border-color: var(--bad); }
+  input { font-size: 17px; padding: 8px 10px; border: 1px solid #ccc; border-radius: 8px; width: 110px; }
+  label { margin-right: 12px; }
+  .out { background: #f3f5f8; border-radius: 8px; padding: 8px 10px; margin-top: 8px; font-size: 16px; white-space: pre-wrap; display: none; }
+  .warnbox { background: #fff4e0; border: 1px solid #f0c27a; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; display: none; }
+  .meter { height: 10px; background: #eee; border-radius: 6px; overflow: hidden; margin-top: 8px; }
+  .meter > div { height: 100%; width: 0; background: var(--ok); transition: width .08s; }
+  audio { width: 100%; margin-top: 8px; display: none; }
+  .done { text-align: center; color: var(--ok); font-weight: bold; display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🎤 日文口說練習｜裝置測試</h1>
+  <div class="sub">依序完成 4 個步驟，最後按「送出測試結果」。大約 2 分鐘。</div>
+
+  <div class="warnbox" id="inAppWarn">
+    ⚠️ 你好像是在 LINE／IG／FB 裡面打開這個網頁，這類 App 內建的瀏覽器常常不能用麥克風。<br>
+    請按右上角「⋯」選「用瀏覽器開啟」（Chrome 或 Safari）再測一次。
+  </div>
+
+  <div class="card">
+    <h2>基本資料</h2>
+    <label>班級 <input id="cls" placeholder="例：應英一"></label>
+    <label>座號 <input id="seat" placeholder="例：5" inputmode="numeric"></label>
+    <div class="hint">老師自己測試時，班級填「測試」。</div>
+  </div>
+
+  <div class="card">
+    <h2>① 聽日文語音 <span class="badge" id="b1">未測試</span></h2>
+    <div class="hint">按下播放，確認聽得到日文（請打開音量）。</div>
+    <button onclick="playTTS()">🔊 播放</button>
+    <div id="ttsAsk" style="display:none">
+      <div class="hint" style="margin-top:8px">聽起來像日文嗎？</div>
+      <button class="ghost" onclick="setTTS(true)">👍 有，是日文</button>
+      <button class="ghost" onclick="setTTS(false)">👎 沒聲音／怪怪的</button>
+    </div>
+    <div class="out" id="o1"></div>
+  </div>
+
+  <div class="card">
+    <h2>② 錄音 <span class="badge" id="b2">未測試</span></h2>
+    <div class="hint">按「開始錄音」，說「おはようございます」，再按「停止」。第一次會跳出麥克風權限，請按「允許」。</div>
+    <button id="recBtn" onclick="toggleRec()">⏺ 開始錄音</button>
+    <div class="meter"><div id="meter"></div></div>
+    <audio id="player" controls></audio>
+    <div id="recAsk" style="display:none">
+      <div class="hint" style="margin-top:8px">播放看看，聽得到自己的聲音嗎？</div>
+      <button class="ghost" onclick="setRec(true)">👍 聽得到</button>
+      <button class="ghost" onclick="setRec(false)">👎 沒聲音</button>
+    </div>
+    <div class="out" id="o2"></div>
+  </div>
+
+  <div class="card">
+    <h2>③ 語音辨識 <span class="badge" id="b3">未測試</span></h2>
+    <div class="hint">按下後說「おはようございます」，看看系統聽成什麼字。</div>
+    <button id="asrBtn" onclick="runASR()">🗣 開始辨識</button>
+    <div class="out" id="o3"></div>
+  </div>
+
+  <div class="card">
+    <h2>④ AI 聽錄音 <span class="badge" id="b4">未測試</span></h2>
+    <div class="hint">把第②步的錄音交給 AI，看它聽到什麼（需先完成第②步）。</div>
+    <button id="aiBtn" onclick="runAI()" disabled>🤖 交給 AI</button>
+    <div class="out" id="o4"></div>
+  </div>
+
+  <button id="sendBtn" onclick="sendResult()" style="width:100%">📨 送出測試結果</button>
+  <p class="done" id="done">已送出，謝謝！可以關閉這個頁面了。</p>
+</div>
+
+<script>
+// ★★★ 把下面引號裡換成你的 Apps Script 網頁應用程式網址（結尾是 /exec）★★★
+const API_URL = 'https://script.google.com/macros/s/AKfycbyHg5by56B21iCpFvibm0Hb1JzGlIIRpbVaFVr_KIxRnHMj79PosczxlG3ubnHAP1Ed/exec';
+
+// 呼叫 Apps Script 後端（用 text/plain 避免跨網域預檢）
+function api(action, data) {
+  if (!/^https:\/\/script\.google\.com\//.test(API_URL)) return Promise.reject(new Error('老師還沒設定 API_URL'));
+  return fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: action, data: data })
+  }).then(res => res.json());
+}
+// ---------- 狀態 ----------
+const R = { tts:'未測試', rec:'未測試', asr:'未測試', ai:'未測試', asrText:'', aiText:'', aiSeconds:'', errors:[] };
+const UA = navigator.userAgent;
+
+function deviceName() {
+  if (/iPad|Macintosh/.test(UA) && 'ontouchend' in document) return 'iPad';
+  if (/iPhone/.test(UA)) return 'iPhone';
+  if (/Android/.test(UA)) return 'Android';
+  if (/CrOS/.test(UA)) return 'Chromebook';
+  if (/Windows/.test(UA)) return 'Windows';
+  if (/Macintosh/.test(UA)) return 'Mac';
+  return '其他';
+}
+function browserName() {
+  if (/\bLine\//i.test(UA)) return 'LINE內建';
+  if (/Instagram/i.test(UA)) return 'IG內建';
+  if (/FBAN|FBAV/i.test(UA)) return 'FB內建';
+  if (/EdgA?\//.test(UA)) return 'Edge';
+  if (/SamsungBrowser/.test(UA)) return 'Samsung';
+  if (/CriOS|Chrome\//.test(UA)) return 'Chrome';
+  if (/FxiOS|Firefox\//.test(UA)) return 'Firefox';
+  if (/Safari\//.test(UA)) return 'Safari';
+  return '其他';
+}
+if (/內建/.test(browserName())) document.getElementById('inAppWarn').style.display = 'block';
+
+function badge(id, cls, text) { const b = document.getElementById(id); b.className = 'badge ' + cls; b.textContent = text; }
+function out(id, text) { const o = document.getElementById(id); o.style.display = 'block'; o.textContent = text; }
+function err(step, e) {
+  const msg = step + '：' + (e && (e.name || e.error) ? (e.name || e.error) + ' ' : '') + (e && e.message ? e.message : (typeof e === 'string' ? e : ''));
+  R.errors.push(msg); return msg;
+}
+
+// ---------- ① 日文語音 ----------
+let jaVoice = null;
+function pickVoice() {
+  const vs = (window.speechSynthesis && speechSynthesis.getVoices()) || [];
+  jaVoice = vs.find(v => /^ja/i.test(v.lang)) || null;
+}
+if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+
+function playTTS() {
+  if (!window.speechSynthesis) {
+    R.tts = '不支援'; badge('b1', 'bad', '不支援');
+    out('o1', err('語音', '此瀏覽器沒有語音朗讀功能')); return;
+  }
+  pickVoice();
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance('おはようございます。毎朝、何時に起きますか。');
+  u.lang = 'ja-JP'; u.rate = 0.9;
+  if (jaVoice) u.voice = jaVoice;
+  u.onerror = e => out('o1', err('語音', e));
+  speechSynthesis.speak(u);
+  document.getElementById('ttsAsk').style.display = 'block';
+  out('o1', jaVoice ? '使用的語音：' + jaVoice.name : '⚠️ 這台裝置沒有找到日文語音，可能會用其他語言的聲音念。');
+}
+function setTTS(ok) {
+  R.tts = ok ? (jaVoice ? 'OK' : 'OK(無日文語音包)') : '失敗' + (jaVoice ? '' : '(無日文語音包)');
+  badge('b1', ok ? 'ok' : 'bad', ok ? '成功' : '失敗');
+}
+
+// ---------- ② 錄音（自己轉成 16kHz WAV，各家瀏覽器都能交給 AI） ----------
+let recording = false, stream = null, ctx = null, proc = null, src = null, chunks = [], inRate = 48000, wavB64 = '', recTimer = null;
+
+async function toggleRec() { recording ? stopRec() : startRec(); }
+
+async function startRec() {
+  const btn = document.getElementById('recBtn');
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('此瀏覽器不支援錄音');
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    await ctx.resume();
+    inRate = ctx.sampleRate;
+    src = ctx.createMediaStreamSource(stream);
+    proc = ctx.createScriptProcessor(4096, 1, 1);
+    chunks = [];
+    proc.onaudioprocess = e => {
+      const d = e.inputBuffer.getChannelData(0);
+      chunks.push(new Float32Array(d));
+      let peak = 0; for (let i = 0; i < d.length; i += 16) peak = Math.max(peak, Math.abs(d[i]));
+      document.getElementById('meter').style.width = Math.min(100, peak * 200) + '%';
+    };
+    src.connect(proc); proc.connect(ctx.destination);
+    recording = true;
+    btn.textContent = '⏹ 停止'; btn.classList.add('rec');
+    badge('b2', 'warn', '錄音中…');
+    recTimer = setTimeout(stopRec, 10000); // 最多 10 秒
+  } catch (e) {
+    R.rec = '失敗'; badge('b2', 'bad', '失敗');
+    let tip = '';
+    if (e.name === 'NotAllowedError') tip = '\n→ 麥克風權限被拒絕。請到瀏覽器設定允許麥克風，或換用 Chrome／Safari 開啟。';
+    if (e.name === 'NotFoundError') tip = '\n→ 找不到麥克風。電腦請確認有接麥克風或耳機。';
+    out('o2', err('錄音', e) + tip);
+  }
+}
+
+function stopRec() {
+  clearTimeout(recTimer);
+  if (!recording) return;
+  recording = false;
+  const btn = document.getElementById('recBtn');
+  btn.textContent = '⏺ 重新錄音'; btn.classList.remove('rec');
+  document.getElementById('meter').style.width = '0';
+  try { src.disconnect(); proc.disconnect(); } catch (e) {}
+  stream.getTracks().forEach(t => t.stop());
+  ctx.close();
+
+  const total = chunks.reduce((n, c) => n + c.length, 0);
+  if (total < inRate * 0.3) { badge('b2', 'bad', '太短'); out('o2', '錄音太短或沒有收到聲音，請再試一次。'); return; }
+  const merged = new Float32Array(total); let off = 0;
+  chunks.forEach(c => { merged.set(c, off); off += c.length; });
+  const pcm = downsample(merged, inRate, 16000);
+  const wav = encodeWAV(pcm, 16000);
+  const blob = new Blob([wav], { type: 'audio/wav' });
+  const player = document.getElementById('player');
+  player.src = URL.createObjectURL(blob); player.style.display = 'block';
+  wavB64 = toBase64(new Uint8Array(wav));
+  document.getElementById('recAsk').style.display = 'block';
+  document.getElementById('aiBtn').disabled = false;
+  badge('b2', 'warn', '請確認');
+  out('o2', '錄到 ' + (total / inRate).toFixed(1) + ' 秒。按上面的播放鍵聽聽看。');
+}
+function setRec(ok) { R.rec = ok ? 'OK' : '錄到但沒聲音'; badge('b2', ok ? 'ok' : 'bad', ok ? '成功' : '失敗'); }
+
+function downsample(buf, from, to) {
+  if (to >= from) return buf;
+  const ratio = from / to, len = Math.floor(buf.length / ratio), res = new Float32Array(len);
+  for (let i = 0; i < len; i++) {
+    const s = Math.floor(i * ratio), e = Math.min(buf.length, Math.floor((i + 1) * ratio));
+    let sum = 0; for (let j = s; j < e; j++) sum += buf[j];
+    res[i] = sum / Math.max(1, e - s);
+  }
+  return res;
+}
+function encodeWAV(samples, rate) {
+  const buf = new ArrayBuffer(44 + samples.length * 2), v = new DataView(buf);
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+  w(36, 'data'); v.setUint32(40, samples.length * 2, true);
+  for (let i = 0, o = 44; i < samples.length; i++, o += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i])); v.setInt16(o, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+  return buf;
+}
+function toBase64(bytes) {
+  let bin = ''; const step = 0x8000;
+  for (let i = 0; i < bytes.length; i += step) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + step));
+  return btoa(bin);
+}
+
+// ---------- ③ 瀏覽器語音辨識 ----------
+function runASR() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { R.asr = '不支援'; badge('b3', 'bad', '不支援'); out('o3', err('辨識', '此瀏覽器不支援語音辨識')); return; }
+  const btn = document.getElementById('asrBtn');
+  const rec = new SR();
+  rec.lang = 'ja-JP'; rec.interimResults = false; rec.maxAlternatives = 1;
+  let got = false;
+  rec.onresult = e => {
+    got = true;
+    R.asrText = e.results[0][0].transcript; R.asr = 'OK';
+    badge('b3', 'ok', '成功'); out('o3', '系統聽到：' + R.asrText);
+  };
+  rec.onerror = e => {
+    got = true; R.asr = '失敗'; badge('b3', 'bad', '失敗');
+    let tip = e.error === 'not-allowed' ? '\n→ 麥克風權限被拒絕' : e.error === 'no-speech' ? '\n→ 沒有聽到聲音，請再試一次' : e.error === 'network' ? '\n→ 網路問題' : '';
+    out('o3', err('辨識', e) + tip);
+  };
+  rec.onend = () => {
+    btn.disabled = false; btn.textContent = '🗣 再辨識一次';
+    if (!got) { R.asr = '沒有結果'; badge('b3', 'warn', '沒有結果'); out('o3', '沒有辨識到內容，請再試一次。'); }
+  };
+  try {
+    rec.start(); btn.disabled = true; btn.textContent = '🎙 請說話…'; badge('b3', 'warn', '聆聽中…');
+  } catch (e) { R.asr = '失敗'; badge('b3', 'bad', '失敗'); out('o3', err('辨識', e)); btn.disabled = false; }
+}
+
+// ---------- ④ AI 聽錄音 ----------
+function runAI() {
+  if (!wavB64) return;
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true; badge('b4', 'warn', 'AI 處理中…'); out('o4', '傳送中，請稍等幾秒…');
+  const t0 = Date.now();
+  api('aiListen', wavB64)
+    .then(r => {
+      btn.disabled = false;
+      const sec = ((Date.now() - t0) / 1000).toFixed(1);
+      if (r && r.ok) {
+        R.ai = 'OK'; R.aiText = r.heard; R.aiSeconds = sec;
+        badge('b4', 'ok', '成功');
+        out('o4', 'AI 聽到：' + r.heard + (r.comment ? '\n' + r.comment : '') + '\n（花了 ' + sec + ' 秒）');
+      } else {
+        R.ai = '失敗'; badge('b4', 'bad', '失敗'); out('o4', err('AI', (r && r.msg) || '未知錯誤'));
+      }
+    })
+    .catch(e => { btn.disabled = false; R.ai = '失敗'; badge('b4', 'bad', '失敗'); out('o4', err('AI', e)); });
+}
+
+// ---------- 送出 ----------
+function sendResult() {
+  const cls = document.getElementById('cls').value.trim(), seat = document.getElementById('seat').value.trim();
+  if (!cls || !seat) { alert('請先填班級和座號'); return; }
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true; btn.textContent = '送出中…';
+  api('saveResult', {
+      cls, seat, device: deviceName(), browser: browserName(),
+      tts: R.tts, rec: R.rec, asr: R.asr, ai: R.ai,
+      asrText: R.asrText, aiText: R.aiText, aiSeconds: R.aiSeconds, errors: R.errors.join(' | ')
+    })
+    .then(r => {
+      if (!r || !r.ok) throw new Error((r && r.msg) || '未知錯誤');
+      btn.style.display = 'none'; document.getElementById('done').style.display = 'block';
+    })
+    .catch(e => { btn.disabled = false; btn.textContent = '📨 送出測試結果'; alert('送出失敗：' + e.message); });
+}
+</script>
+</body>
+</html>
